@@ -44,18 +44,20 @@ make publish-clean   # Clean up
 
 5. **Build package**:
    ```bash
-   uv run python -m build
+   uv run hatch build
    ```
 
 6. **Check distribution**:
    ```bash
-   uv run twine check dist/*
+   uv run hatch check
    ```
 
 7. **Publish to PyPI**:
    ```bash
-   uv run twine upload dist/*
+   uv run hatch publish
    ```
+
+   (Or test first: `uv run hatch publish --repo test`)
 
 8. **Push to GitHub**:
    ```bash
@@ -63,23 +65,46 @@ make publish-clean   # Clean up
    ```
 
 9. **Create GitHub release** with binaries from `dist/`:
+
+   First, analyze all changes to write comprehensive release notes:
+
    ```bash
-   # Show commits since last tag for notes
+   # Show commits since last tag
    git log $(git describe --tags --abbrev=0)..HEAD --oneline
 
-   # Create release with binaries + auto-generated notes
-   gh release create X.Y.Z dist/* --title "X.Y.Z" --generate-notes
+   # Show file change statistics
+   git diff $(git describe --tags --abbrev=0)..HEAD --stat
+
+   # For significant changes, examine key file diffs
+   git diff <last-tag>..<current> -- <file-path>
+
+   # Read new modules to understand features
+   # Use Read tool on new/changed files
    ```
 
-   Release notes should summarize:
-   - New features
-   - Bug fixes
-   - Breaking changes (if any)
-   - Dependencies updated
+   **Writing Release Notes:**
+
+   - DO NOT just list commit messages - analyze what actually changed
+   - Group changes by category (New Features, Performance, Bug Fixes, Breaking Changes)
+   - For new modules: explain what they do and when to use them
+   - For performance changes: describe what was optimized
+   - For refactoring: explain the new structure and benefits
+   - Include concrete examples of API changes
+
+   Create the release:
+   ```bash
+   gh release create X.Y.Z dist/* --title "X.Y.Z" --notes "YOUR_NOTES"
+   ```
+
+   Or edit an existing release:
+   ```bash
+   gh release edit X.Y.Z --notes "YOUR_NOTES"
+   ```
 
 ## Notes
 
-- Make sure `twine` is installed: `uv pip install twine build`
+- Use `hatch` for building and publishing (not `twine`)
+- Add `hatch` to dev dependencies in `pyproject.toml`
 - Use semantic versioning:
   - **Patch** (X.Y.Z): Bug fixes, small improvements
   - **Minor** (X.Y.0): New features, backward compatible
