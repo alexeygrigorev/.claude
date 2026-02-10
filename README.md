@@ -6,6 +6,19 @@ This directory contains symlinks and configuration for Claude Code CLI.
 
 Create symlinks from this repo to `~/.claude`:
 
+### Windows (Git Bash)
+
+On Windows, use directory junctions since symlinks require special permissions:
+
+```bash
+cd ~/git/.claude
+WIN_PATH=$(cygpath -w "$(pwd)")
+cmd.exe //c "mklink /J %USERPROFILE%\\.claude\\skills ${WIN_PATH}\\skills"
+cmd.exe //c "mklink /J %USERPROFILE%\\.claude\\commands ${WIN_PATH}\\commands"
+```
+
+### macOS/Linux
+
 ```bash
 cd ~/git/.claude
 ln -sf "$(pwd)/skills" ~/.claude/skills

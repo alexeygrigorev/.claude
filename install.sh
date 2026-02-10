@@ -4,8 +4,22 @@
 REPO_DIR="$(pwd)"
 
 # Create symlinks
-ln -sf "$REPO_DIR/skills" ~/.claude/skills
-ln -sf "$REPO_DIR/commands" ~/.claude/commands
+if [[ "$OS" == "Windows_NT" ]]; then
+    # Windows - use mklink for directory junctions
+    echo "Creating directory junctions on Windows..."
+    WIN_REPO=$(cygpath -w "$REPO_DIR")
+
+    # Remove existing directories/junctions if they exist
+    rm -rf ~/.claude/skills ~/.claude/commands
+
+    cmd.exe //c "mklink /J %USERPROFILE%\\.claude\\skills ${WIN_REPO}\\skills" 2>/dev/null
+    cmd.exe //c "mklink /J %USERPROFILE%\\.claude\\commands ${WIN_REPO}\\commands" 2>/dev/null
+else
+    # Unix/macOS - use regular symlinks
+    echo "Creating symlinks on Unix/macOS..."
+    ln -sf "$REPO_DIR/skills" ~/.claude/skills
+    ln -sf "$REPO_DIR/commands" ~/.claude/commands
+fi
 
 # Set repo path in ~/.bashrc
 if ! grep -q "CLAUDE_DOTFILES_DIR" ~/.bashrc; then
