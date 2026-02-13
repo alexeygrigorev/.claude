@@ -3,8 +3,8 @@
 
 REPO_DIR="$(pwd)"
 
-# Create symlinks for ~/.claude and ~/.opencode
-TARGETS=(~/.claude ~/.opencode)
+# Create symlinks for ~/.claude and ~/.config/opencode
+TARGETS=(~/.claude ~/.config/opencode)
 
 for TARGET_DIR in "${TARGETS[@]}"; do
     # Create target directory if it doesn't exist
