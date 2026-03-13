@@ -17,9 +17,9 @@ source ~/.bashrc
 
 The installer will:
 
-- **Symlink `skills/` and `commands/`** into `~/.claude` and `~/.config/opencode` (uses directory junctions on Windows)
-- **Add a `source` line to `~/.bashrc`** pointing to this repo's `.bashrc` (with confirmation, idempotent)
-- **Configure `~/.claude/settings.json`** — sets `attribution.commit` to empty string
+- Symlink `skills/` and `commands/` into `~/.claude` and `~/.config/opencode` (uses directory junctions on Windows)
+- Add a `source` line to `~/.bashrc` pointing to this repo's `.bashrc` (with confirmation, idempotent)
+- Configure `~/.claude/settings.json` — sets `attribution.commit` to empty string
 
 Since `.bashrc` is sourced from the repo, pulling updates is enough to get new aliases and functions — no need to re-run the installer.
 
@@ -65,7 +65,7 @@ Available after sourcing `.bashrc`:
 
 ### Functions
 
-- **`claude_init`** — Copy the shared `CLAUDE.md` template into the current directory to bootstrap a new project
+- `claude_init` — Copy the shared `CLAUDE.md` template into the current directory to bootstrap a new project
 
 ## OpenCode Compatibility
 
@@ -73,7 +73,7 @@ The installer symlinks skills and commands into `~/.config/opencode` as well, so
 
 ## Adding New Skills and Commands
 
-- **Skills**: Create a folder in `skills/` with a `SKILL.md` frontmatter file and any supporting scripts
-- **Commands**: Add a markdown file to `commands/` with instructions for Claude to follow
+- Skills: create a folder in `skills/` with a `SKILL.md` frontmatter file and any supporting scripts
+- Commands: add a markdown file to `commands/` with instructions for Claude to follow
 
 Changes are picked up automatically — no re-install needed since the directories are symlinked.
