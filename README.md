@@ -1,46 +1,33 @@
 # Claude Dotfiles
 
-This directory contains symlinks and configuration for Claude Code CLI.
+Configuration, skills, and setup scripts for Claude Code CLI.
 
-## Symlinks
-
-Create symlinks from this repo to `~/.claude`:
-
-### Windows (Git Bash)
-
-On Windows, use directory junctions since symlinks require special permissions:
+## Install
 
 ```bash
 cd ~/git/.claude
-WIN_PATH=$(cygpath -w "$(pwd)")
-cmd.exe //c "mklink /J %USERPROFILE%\\.claude\\skills ${WIN_PATH}\\skills"
-cmd.exe //c "mklink /J %USERPROFILE%\\.claude\\commands ${WIN_PATH}\\commands"
+./install.sh
+source ~/.bashrc
 ```
 
-### macOS/Linux
-
-```bash
-cd ~/git/.claude
-ln -sf "$(pwd)/skills" ~/.claude/skills
-ln -sf "$(pwd)/commands" ~/.claude/commands
-```
+This will:
+- Create symlinks/junctions for `skills/` and `commands/` in `~/.claude` and `~/.config/opencode`
+- Add a `source` line to `~/.bashrc` (with confirmation)
+- Set `attribution.commit` in `~/.claude/settings.json`
 
 ## Structure
 
 - `skills/` - Custom skills for Claude Code
 - `commands/` - Custom commands for Claude Code
+- `scripts/` - Python setup scripts (run via `uv run python`)
 - `.bashrc` - Claude-related aliases and functions
 
-## Bash Integration
+## Bash Aliases
 
-To add Claude aliases and functions to your shell:
-
-```bash
-cat .bashrc >> ~/.bashrc && source ~/.bashrc
-```
-
-Or use the install command:
-
-```bash
-./install.sh
-```
+| Alias | Command |
+|-------|---------|
+| `c` | `claude` |
+| `cc` | `claude -c` |
+| `csp` | `claude --dangerously-skip-permissions` |
+| `ccsp` | `claude -c --dangerously-skip-permissions` |
+| `claude_init` | Copy `CLAUDE.md` template to current directory |
