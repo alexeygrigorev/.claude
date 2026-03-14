@@ -1,7 +1,7 @@
 ---
 name: fetch-youtube
 description: Fetch YouTube video transcripts. Use when the user asks to get a YouTube video transcript, subtitles, or captions, or wants to analyze/summarize a YouTube video.
-allowed-tools: Bash(python *), Bash(pip install *)
+allowed-tools: Bash(uv run *)
 argument-hint: [video-url-or-id]
 ---
 
@@ -9,26 +9,29 @@ argument-hint: [video-url-or-id]
 
 Fetch the transcript/subtitles of a YouTube video and return it as timestamped text.
 
-## Requirements
-
-Ensure `youtube-transcript-api` is installed:
-
-```bash
-pip install youtube-transcript-api
-```
-
 ## Usage
 
 Run the fetch script with a YouTube video ID or URL:
 
 ```bash
-python ~/.claude/skills/fetch-youtube/youtube.py <video-id-or-url>
+uv run --with youtube-transcript-api --with python-dotenv ~/.claude/skills/fetch-youtube/youtube.py <video-id-or-url>
 ```
 
 The script accepts either:
 - A video ID: `dQw4w9WgXcQ`
 - A full URL: `https://www.youtube.com/watch?v=dQw4w9WgXcQ`
 - A short URL: `https://youtu.be/dQw4w9WgXcQ`
+
+## Proxy support (if YouTube blocks your IP)
+
+The script automatically loads Oxylabs proxy credentials from `~/.config/youtube/.env` if present. If the direct request fails, the retry will use the proxy. No extra flags needed - just run the same command above.
+
+The `.env` file should contain:
+```
+OXYLABS_USER=...
+OXYLABS_ENDPOINT=...
+OXYLABS_PASSWORD=...
+```
 
 ## Output
 

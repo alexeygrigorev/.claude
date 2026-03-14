@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
-"""Fetch YouTube video transcripts as timestamped subtitles."""
+"""Fetch YouTube video transcripts as timestamped subtitles, with optional proxy support."""
 
+import os
 import re
 import sys
+import time
 from pathlib import Path
+from urllib.parse import quote
 
 from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api.proxies import GenericProxyConfig
 
 
 def extract_video_id(url_or_id: str) -> str:
@@ -43,27 +47,52 @@ def make_subtitles(transcript) -> str:
     return "\n".join(lines)
 
 
-def fetch_transcript_raw(video_id):
-    """Fetch raw transcript data from YouTube."""
-    ytt_api = YouTubeTranscriptApi()
-    transcript = ytt_api.fetch(video_id)
-    return transcript
+def _build_proxy_url() -> str | None:
+    """Build Oxylabs proxy URL from env vars. Uses one-time sessions (random IP each request)."""
+    user = os.environ.get("OXYLABS_USER")
+    endpoint = os.environ.get("OXYLABS_ENDPOINT")
+    password = os.environ.get("OXYLABS_PASSWORD")
+    if not user or not endpoint or not password:
+        return None
+    username = f"customer-{user}"
+    return f"http://{username}:{quote(password, safe='')}@{endpoint}"
 
 
-def fetch_transcript_text(video_id):
-    """Fetch transcript and return as formatted subtitle text."""
-    transcript = fetch_transcript_raw(video_id)
-    subtitles = make_subtitles(transcript)
-    return subtitles
+def create_api() -> YouTubeTranscriptApi:
+    """Create YouTubeTranscriptApi instance, with proxy if Oxylabs credentials are set."""
+    from dotenv import load_dotenv
+    load_dotenv(Path.home() / ".config" / "youtube" / ".env")
+    proxy_url = _build_proxy_url()
+
+    if proxy_url:
+        proxy_config = GenericProxyConfig(
+            http_url=proxy_url,
+            https_url=proxy_url,
+        )
+        return YouTubeTranscriptApi(proxy_config=proxy_config)
+
+    return YouTubeTranscriptApi()
 
 
-def fetch_transcript_cached(video_id, cache_dir=None):
+def fetch_transcript_text(video_id: str, retries: int = 3) -> str:
+    """Fetch transcript and return as formatted subtitle text. Retries on failure."""
+    for attempt in range(retries):
+        try:
+            api = create_api()
+            transcript = api.fetch(video_id)
+            return make_subtitles(transcript)
+        except Exception as e:
+            if attempt < retries - 1:
+                wait = 2 ** attempt
+                print(f"Attempt {attempt + 1} failed: {e}. Retrying in {wait}s...", file=sys.stderr)
+                time.sleep(wait)
+            else:
+                raise
+
+
+def fetch_transcript_cached(video_id: str) -> str:
     """Fetch transcript with local file caching."""
-    if cache_dir is None:
-        cache_dir = Path.home() / ".cache" / "youtube_transcripts"
-    else:
-        cache_dir = Path(cache_dir)
-
+    cache_dir = Path.home() / ".cache" / "youtube_transcripts"
     cache_dir.mkdir(parents=True, exist_ok=True)
     cache_file = cache_dir / f"{video_id}.txt"
 
@@ -72,7 +101,6 @@ def fetch_transcript_cached(video_id, cache_dir=None):
 
     subtitles = fetch_transcript_text(video_id)
     cache_file.write_text(subtitles, encoding="utf-8")
-
     return subtitles
 
 
