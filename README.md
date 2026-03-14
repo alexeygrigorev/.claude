@@ -6,12 +6,10 @@ This repo serves as a single place to manage your AI coding assistant setup — 
 
 ## Install
 
-Requires [uv](https://docs.astral.sh/uv/).
+Requires [git](https://git-scm.com/) and [uv](https://docs.astral.sh/uv/).
 
 ```bash
-git clone git@github.com:alexeygrigorev/.claude.git ~/git/.claude
-cd ~/git/.claude
-./install.sh
+curl -sSL https://raw.githubusercontent.com/alexeygrigorev/.claude/main/setup.sh | bash
 source ~/.bashrc
 ```
 
