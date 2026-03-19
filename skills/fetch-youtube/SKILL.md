@@ -9,6 +9,20 @@ argument-hint: [video-url-or-id]
 
 Fetch the transcript/subtitles of a YouTube video and return it as timestamped text.
 
+## Requirements
+
+Ensure `youtube-transcript-api` is installed:
+
+```bash
+pip install youtube-transcript-api
+```
+
+**Alternative - No installation required (using uv):**
+
+```bash
+uv run --with youtube-transcript-api python ~/.claude/skills/fetch-youtube/youtube.py <video-id-or-url>
+```
+
 ## Usage
 
 Run the fetch script with a YouTube video ID or URL:
