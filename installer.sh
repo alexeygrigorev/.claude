@@ -1,6 +1,6 @@
 #!/bin/bash
 # One-line installer for Claude Dotfiles
-# Usage: curl -sSL https://raw.githubusercontent.com/alexeygrigorev/.claude/main/setup.sh | bash
+# Usage: curl -sSL https://raw.githubusercontent.com/alexeygrigorev/.claude/main/installer.sh | bash
 
 set -e
 
@@ -29,9 +29,9 @@ else
     git clone "$REPO_URL" "$INSTALL_DIR"
 fi
 
-# Run the installer
+# Run configure
 cd "$INSTALL_DIR"
-./install.sh
+./configure.sh
 
 echo ""
 echo "Run 'source ~/.bashrc' or restart your shell to apply changes."

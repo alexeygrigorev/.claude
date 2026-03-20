@@ -26,7 +26,7 @@ for TARGET_DIR in "${TARGETS[@]}"; do
 done
 
 # Setup bashrc source line and settings.json
-uv run python "$REPO_DIR/scripts/setup_bashrc.py"
-uv run python "$REPO_DIR/scripts/setup_settings.py"
+uv run --no-project python "$REPO_DIR/scripts/setup_bashrc.py"
+uv run --no-project python "$REPO_DIR/scripts/setup_settings.py"
 
 echo "Installation complete. Run 'source ~/.bashrc' to apply changes."

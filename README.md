@@ -8,8 +8,17 @@ This repo serves as a single place to manage your AI coding assistant setup — 
 
 Requires [git](https://git-scm.com/) and [uv](https://docs.astral.sh/uv/).
 
+**One-liner** (clones and installs):
+
 ```bash
-curl -sSL https://raw.githubusercontent.com/alexeygrigorev/.claude/main/setup.sh | bash
+curl -sSL https://raw.githubusercontent.com/alexeygrigorev/.claude/main/installer.sh | bash
+source ~/.bashrc
+```
+
+**Already cloned?** Run configure directly:
+
+```bash
+./configure.sh
 source ~/.bashrc
 ```
 
@@ -29,7 +38,8 @@ Since `.bashrc` is sourced from the repo, pulling updates is enough to get new a
 ├── commands/          # Slash commands (invoked manually)
 ├── scripts/           # Python setup scripts (run via uv)
 ├── .bashrc            # Shell aliases and functions
-└── install.sh         # Installer
+├── installer.sh       # One-liner (curl | bash) — clones repo + runs configure
+└── configure.sh       # Local setup — symlinks, bashrc, settings
 ```
 
 ## Skills
