@@ -11,6 +11,7 @@ DESTRUCTIVE_PATTERNS = [
     ("DROP TABLE", "table deletion"),
     ("git push --force", "force push"),
     ("git push -f", "force push"),
+    ("terraform apply", "Terraform apply"),
 ]
 
 
