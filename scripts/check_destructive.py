@@ -1,6 +1,7 @@
 """PreToolUse hook: block destructive commands unless explicitly confirmed."""
 
 import json
+import shlex
 import sys
 
 # Each entry: (pattern to match, human-readable description)
@@ -15,6 +16,25 @@ DESTRUCTIVE_PATTERNS = [
 ]
 
 
+def strip_quotes(command: str) -> str:
+    """Remove quoted strings and heredocs to avoid false positives from
+    commit messages, echo statements, etc."""
+    # Remove heredoc bodies: everything between <<'EOF' ... EOF (or <<EOF ... EOF)
+    import re
+
+    command = re.sub(
+        r"<<-?\s*['\"]?(\w+)['\"]?.*?\n\1",
+        "",
+        command,
+        flags=re.DOTALL,
+    )
+    # Remove single-quoted strings
+    command = re.sub(r"'[^']*'", '""', command)
+    # Remove double-quoted strings (handling escaped quotes)
+    command = re.sub(r'"(?:[^"\\]|\\.)*"', '""', command)
+    return command
+
+
 def main():
     try:
         data = json.load(sys.stdin)
@@ -22,9 +42,10 @@ def main():
         return
 
     command = data.get("tool_input", {}).get("command", "")
+    cleaned = strip_quotes(command)
 
     for pattern, description in DESTRUCTIVE_PATTERNS:
-        if pattern in command:
+        if pattern in cleaned:
             json.dump(
                 {
                     "decision": "block",

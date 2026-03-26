@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Wrapper around gh CLI that blocks destructive commands unless confirmed.
+
+REAL_GH="$(command -v -p gh 2>/dev/null || echo /usr/bin/gh)"
+
+# Find the real gh binary (skip this wrapper)
+for p in $(echo "$PATH" | tr ':' '\n'); do
+    if [[ "$p/gh" != "$0" && -x "$p/gh" ]]; then
+        REAL_GH="$p/gh"
+        break
+    fi
+done
+
+if [[ "$1" == "repo" && "$2" == "delete" ]]; then
+    echo "BLOCKED: 'gh repo delete' is disabled as a safety measure."
+    echo ""
+    if [ -t 0 ] && [ -t 1 ]; then
+        read -p "Type YES to proceed anyway: " confirm
+        if [[ "$confirm" == "YES" ]]; then
+            exec "$REAL_GH" "$@"
+        else
+            echo "Aborted."
+            exit 1
+        fi
+    else
+        echo "To bypass, run the real binary directly: $REAL_GH repo delete ..."
+        exit 1
+    fi
+fi
+
+exec "$REAL_GH" "$@"
