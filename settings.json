@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cd \"$CLAUDE_DOTFILES_DIR\" && uv run python scripts/check_destructive.py"
+            "command": "uv run --directory {{REPO_DIR}} python scripts/check_destructive.py"
           }
         ]
       }

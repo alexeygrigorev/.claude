@@ -21,7 +21,18 @@ def ensure_attribution(data: dict) -> bool:
     return False
 
 
-def merge_hooks(data: dict, repo_hooks: dict) -> bool:
+def resolve_repo_dir(obj, repo_dir: str):
+    """Recursively replace {{REPO_DIR}} placeholders in strings."""
+    if isinstance(obj, str):
+        return obj.replace("{{REPO_DIR}}", repo_dir)
+    if isinstance(obj, list):
+        return [resolve_repo_dir(item, repo_dir) for item in obj]
+    if isinstance(obj, dict):
+        return {k: resolve_repo_dir(v, repo_dir) for k, v in obj.items()}
+    return obj
+
+
+def merge_hooks(data: dict, repo_hooks: dict, repo_dir: str) -> bool:
     """Merge repo hooks into user settings, without duplicating."""
     changed = False
     user_hooks = data.setdefault("hooks", {})
@@ -30,6 +41,7 @@ def merge_hooks(data: dict, repo_hooks: dict) -> bool:
         user_matchers = user_hooks.setdefault(event, [])
 
         for repo_entry in repo_matchers:
+            repo_entry = resolve_repo_dir(repo_entry, repo_dir)
             repo_matcher = repo_entry.get("matcher")
 
             # Find existing entry with same matcher
@@ -78,7 +90,7 @@ def main():
     # Hooks
     repo_hooks = repo_settings.get("hooks", {})
     if repo_hooks:
-        if merge_hooks(data, repo_hooks):
+        if merge_hooks(data, repo_hooks, str(repo_dir)):
             print(f"  Merged hooks into {settings_path}")
             changed = True
         else:
