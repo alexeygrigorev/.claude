@@ -6,6 +6,11 @@ set -e
 
 REPO_URL="https://github.com/alexeygrigorev/.claude.git"
 INSTALL_DIR="$HOME/git/.claude"
+YES_FLAG=""
+
+if [ "${1:-}" = "--yes" ]; then
+    YES_FLAG="--yes"
+fi
 
 # Check for git
 if ! command -v git &>/dev/null; then
@@ -31,7 +36,7 @@ fi
 
 # Run configure
 cd "$INSTALL_DIR"
-./configure.sh
+./configure.sh $YES_FLAG
 
 echo ""
 echo "Run 'source ~/.bashrc' or restart your shell to apply changes."

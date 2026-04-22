@@ -1,9 +1,10 @@
 """Ensure ~/.bashrc sources the repo's .bashrc file."""
 
+import argparse
 from pathlib import Path
 
 
-def ensure_source_line(repo_dir: Path):
+def ensure_source_line(repo_dir: Path, *, yes: bool = False):
     bashrc = Path.home() / ".bashrc"
     bashrc_source = repo_dir / ".bashrc"
 
@@ -28,10 +29,11 @@ def ensure_source_line(repo_dir: Path):
             print("Source line already present in ~/.bashrc")
             return
 
-    answer = input(f"Add '{source_line}' to ~/.bashrc? [y/N] ").strip().lower()
-    if answer != "y":
-        print("Skipped.")
-        return
+    if not yes:
+        answer = input(f"Add '{source_line}' to ~/.bashrc? [y/N] ").strip().lower()
+        if answer != "y":
+            print("Skipped.")
+            return
 
     with open(bashrc, "a") as f:
         f.write(f"\n# Claude dotfiles\n{source_line}\n")
@@ -39,5 +41,8 @@ def ensure_source_line(repo_dir: Path):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--yes", action="store_true", help="Update ~/.bashrc without prompting")
+    args = parser.parse_args()
     repo_dir = Path(__file__).resolve().parent.parent
-    ensure_source_line(repo_dir)
+    ensure_source_line(repo_dir, yes=args.yes)

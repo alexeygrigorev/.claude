@@ -2,6 +2,11 @@
 # Install Claude dotfiles
 
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
+YES_FLAG=""
+
+if [[ "${1:-}" == "--yes" ]]; then
+    YES_FLAG="--yes"
+fi
 
 # Create symlinks for ~/.claude and ~/.config/opencode
 TARGETS=(~/.claude ~/.config/opencode)
@@ -46,7 +51,7 @@ elif [[ "$(command -v gh)" != "$HOME/bin/gh" ]]; then
 fi
 
 # Setup bashrc source line and settings.json
-uv run --no-project python "$REPO_DIR/scripts/setup_bashrc.py"
+uv run --no-project python "$REPO_DIR/scripts/setup_bashrc.py" $YES_FLAG
 uv run --no-project python "$REPO_DIR/scripts/setup_settings.py"
 
 echo "Installation complete. Run 'source ~/.bashrc' to apply changes."

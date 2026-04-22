@@ -4,3 +4,6 @@ version = "0.1.0"
 description = "Claude Code dotfiles and setup scripts"
 requires-python = ">=3.10"
 dependencies = []
+
+[tool.uv]
+exclude-newer = "7 days"
