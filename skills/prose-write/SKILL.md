@@ -142,38 +142,85 @@ graft a paragraph back. Say where the backup is.
 If the project uses `stylint` or similar, run it **after** the rewrite, not
 before. Rewriting invalidates every line number, so a pre-pass is wasted work.
 
-Expect a large raw count and do not panic at it. Linters tuned for technical
-walkthroughs flag the exact constructs that make a page retrievable by search
-engines and LLMs. Split the findings in two and only act on one half.
+Expect a large raw count and do not panic at it. But do not treat the count as
+someone else's problem either.
 
-**Keep these. They are load-bearing, not defects:**
+**The default is to fix, not to override.** Stylint encodes the user's house
+style. Wanting a page to rank well is not a licence to ignore it. If you think
+a rule should be overridden, that is a decision for the user to make, so put it
+to them explicitly and get an answer before you ship. Do not bury it in a
+sentence at the end of a status report and treat silence as agreement. Being
+asked twice why a finding is still there means you got this wrong.
 
-| Rule | Why keep it |
+**Check the house norm before arguing structure.** Before claiming a rule is
+routinely ignored in this repo, count it:
+
+```bash
+grep -l "^### " _posts/*.md | wc -l          # how many files use the construct
+ls _posts/*.md | wc -l                        # out of how many
+stylint _posts/<some-other-post>.md | head -1 # what a typical file scores
+```
+
+If most existing files already violate the rule, say so with the numbers and
+the argument is settled. If they do not, your page is the outlier and you
+should fix it.
+
+**Genuinely unfixable, worth stating once:**
+
+| Rule | Why it cannot be fixed |
 | --- | --- |
-| `bold` | Bolded entities and figures are what LLMs extract |
-| `tables` | Comparison tables are the most extractable format there is |
-| `heading-too-deep` | `###` sub-headings map to the sub-questions an LLM decomposes a query into |
-| `heading-question-word` | Question-shaped headings match how people actually ask |
-| `semicolon` | Usually a false positive on inline CSS inside `<figure>`/`<img>` tags |
-| `blockquote-long` | Testimonials are verbatim quotes and cannot be shortened |
-| `many-commas` / `long-clause-likely` | Often fires on deliberate stat sentences and entity lists |
+| `semicolon` | Fires on inline CSS inside `<img style="...">`, not on prose |
+| `blockquote-long` | Testimonials are verbatim quotes from real people |
+| `third-person` | The author's own name in a self-introduction and signature |
+| `contraction` | Fires on expanded forms at the end of a sentence, which the rule's own exemption covers |
 
-**Fix these. They are real voice defects:**
+**Judgment, not blanket fixing:** `many-commas`, `long-clause-likely`,
+`long-list-likely`, `colon-inline`. Stylint's own guide says so. These fire on
+well-formed long sentences, and mechanically splitting all of them recreates
+the clipped, staccato voice the rewrite existed to remove. Fix the ones that
+genuinely read better split, leave the rest, and say which.
+
+**Fix these. They are real defects:**
 
 `banned-word`, `banned-phrase`, `abstract-subject`, `choppy-rhythm`,
 `contraction`, `past-tense-fragment`, `lead-in`, `prose-question`, `em-dash`,
 `third-person`.
 
-Run the second pass with the structural rules suppressed so the real findings
-are readable:
+Use `--ignore` only to make a long list readable while you work:
 
 ```bash
-stylint file.md --ignore bold,tables,heading-too-deep,heading-question-word,\
-blockquote-long,semicolon,many-commas,long-clause-likely,long-list-likely,colon-inline
+stylint file.md --ignore semicolon,blockquote-long,many-commas,long-clause-likely
 ```
 
-Then run the full check without `--ignore` once at the end, so you can report
-the true remaining count.
+Then run the full check without `--ignore` at the end, and **re-run it after
+every subsequent edit**, including one-line wording changes. Rewriting
+invalidates line numbers, and a "quick fix" pushed without a verification pass
+is how regressions ship.
+
+**Removing bold has a side effect.** Bold labels at the start of a paragraph
+(`**Weekly newsletter.** Every Monday we send it to...`) become bare sentence
+fragments once the bold is stripped, and `choppy-rhythm` fires on all of them.
+Rewrite those paragraphs so the label becomes the subject of a real sentence
+("Our weekly newsletter goes out every Monday to..."), rather than leaving the
+fragment in place.
+
+**Renaming question-word headings.** `heading-question-word` fires on any
+heading that starts with Why / Who / What / How / Where, not just literal
+questions. Rename to a noun phrase, and watch for `lazy-heading` on the
+replacement: "The reason for this page" trips it, "Sponsors keep this community
+free" does not. Name what the section says, not what kind of section it is.
+
+Worked renames:
+
+| Flagged | Replacement |
+| --- | --- |
+| Who you reach | The audience |
+| What they do | Roles |
+| How senior they are | Seniority |
+| Where they are | Geography |
+| Where they work | Industries |
+| What you can sponsor | Sponsorship formats |
+| What sponsors say | Sponsor feedback |
 
 **Findings that survive on purpose.** Some are correct to leave. In a
 first-person article the author's own name in the self-introduction and in the
@@ -188,8 +235,9 @@ structural slip: "This article is that email" and "The article stays up
 permanently" both need a named actor, as in "I've written that email once" and
 "We keep the article up permanently".
 
-Always tell the user which rules you overrode and why. Give the raw count, the
-fixed count, and the count you deliberately kept.
+Always tell the user which rules you overrode and why, up front and as a
+question, not as a footnote. Give the raw count, the fixed count, and the count
+you deliberately kept.
 
 ## Workflow summary
 
@@ -199,8 +247,9 @@ fixed count, and the count you deliberately kept.
 4. Verify invariants mechanically. Do not skip this.
 5. Back up the original, install the rewrite.
 6. Rebuild and re-validate JSON-LD or templating.
-7. Stylint voice pass, structural rules overridden.
+7. Stylint pass. Fix by default; ask before overriding anything.
 8. Rebuild, then report what changed and what you kept.
+9. Re-run stylint after every later edit, however small, before pushing.
 
 Expect the user to iterate on individual sentences afterwards. Keep the backup
 until they say they are done.
