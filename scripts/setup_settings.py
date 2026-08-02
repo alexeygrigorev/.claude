@@ -15,7 +15,13 @@ def save_json(path: Path, data: dict):
 
 
 def ensure_attribution(data: dict) -> bool:
-    """Force attribution.commit and attribution.pr to empty strings (disabled)."""
+    """Disable all Claude attribution in commits and PRs.
+
+    attribution.commit and attribution.pr hide the Co-Authored-By trailer and
+    the PR-body attribution text. attribution.sessionUrl is separate: it
+    controls the claude.ai session link appended as a Claude-Session commit
+    trailer and as a link in PR bodies, and defaults to true.
+    """
     changed = False
     attr = data.setdefault("attribution", {})
     if attr.get("commit", "") != "":
@@ -23,6 +29,9 @@ def ensure_attribution(data: dict) -> bool:
         changed = True
     if attr.get("pr", "") != "":
         attr["pr"] = ""
+        changed = True
+    if attr.get("sessionUrl") is not False:
+        attr["sessionUrl"] = False
         changed = True
     return changed
 
