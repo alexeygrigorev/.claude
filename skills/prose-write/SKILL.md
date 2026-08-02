@@ -1,6 +1,6 @@
 ---
 name: prose-write
-description: Rewrite the prose of an article, post, or doc in a warmer authorial voice by piping it through a pinned Claude model, while keeping structure, numbers, quotes, and markup byte-identical. Use when the user wants a draft rewritten for voice, says the writing is too clipped or too corporate, or asks for a specific model version to do the writing.
+description: Write or rewrite prose with a pinned Claude model version (e.g. opus 4.6), keeping structure, numbers, quotes and markup byte-identical. Use whenever the user names a model version for writing, or wants a draft rewritten for voice.
 allowed-tools: Bash(claude *), Bash(cat *), Bash(cp *), Bash(python3 *), Read, Write
 argument-hint: [path-to-file]
 ---
