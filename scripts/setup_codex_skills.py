@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import subprocess
 from pathlib import Path
 
 
@@ -34,24 +35,36 @@ def save_state(path: Path, skills: set[str]) -> None:
 def remove_path(path: Path) -> None:
     if path.is_symlink() or path.is_file():
         path.unlink()
+    elif path.is_junction():
+        path.rmdir()
     elif path.is_dir():
         shutil.rmtree(path)
 
 
 def ensure_symlink(target: Path, source: Path) -> bool:
-    if target.is_symlink():
-        current = Path(target.readlink())
-        if not current.is_absolute():
-            current = (target.parent / current).resolve()
+    if target.is_symlink() or target.is_junction():
+        if target.is_junction():
+            current = target.resolve()
         else:
-            current = current.resolve()
+            current = Path(target.readlink())
+            if not current.is_absolute():
+                current = (target.parent / current).resolve()
+            else:
+                current = current.resolve()
         if current == source.resolve():
             return False
-        target.unlink()
+        remove_path(target)
     elif target.exists():
         return False
 
-    target.symlink_to(source)
+    if os.name == "nt":
+        subprocess.run(
+            ["cmd.exe", "/c", "mklink", "/J", str(target), str(source)],
+            check=True,
+            stdout=subprocess.DEVNULL,
+        )
+    else:
+        target.symlink_to(source)
     return True
 
 
@@ -68,13 +81,13 @@ def sync_skills(codex_skills_dir: Path, repo_skills_dir: Path, old_skills: set[s
 
         target = codex_skills_dir / child.name
         ensure_symlink(target, child.resolve())
-        if target.is_symlink():
+        if target.is_symlink() or target.is_junction():
             desired.add(child.name)
 
     for name in old_skills - desired:
         target = codex_skills_dir / name
-        if target.is_symlink():
-            target.unlink()
+        if target.is_symlink() or target.is_junction():
+            remove_path(target)
 
     return desired
 
