@@ -8,6 +8,10 @@ alias cc="claude -c"
 alias csp="claude --dangerously-skip-permissions"
 alias ccsp="claude -c --dangerously-skip-permissions"
 alias cy="codex --dangerously-bypass-approvals-and-sandbox"
+alias g="grok"
+alias gc="grok -c"
+alias gsp="grok --permission-mode bypassPermissions"
+alias gcsp="grok -c --permission-mode bypassPermissions"
 
 # zlaude: Claude Code routed to Z.AI via the ~/.zlaude profile
 # (configure with: ./configure.sh zlaude).
