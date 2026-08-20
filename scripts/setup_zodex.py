@@ -10,6 +10,8 @@ import shlex
 import subprocess
 import sys
 from pathlib import Path
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 
 ZODEX_PROXY_PORT = 18765
@@ -20,7 +22,7 @@ ZAI_API_KEY_URL = "https://z.ai/manage-apikey/apikey-list"
 CONFIG_TOML = f"""# Codex routed to Z.AI GLM Coding Plan.
 # This profile is selected by setting CODEX_HOME=$HOME/.zodex.
 
-model = "glm-5.2"
+model = "glm-5.3"
 model_provider = "codex-proxy"
 model_catalog_json = __MODEL_CATALOG_JSON__
 model_context_window = 1000000
@@ -85,6 +87,42 @@ MODEL_CATALOG_JSON = """{
       "use_responses_lite": false
     },
     {
+      "slug": "glm-5.3",
+      "display_name": "GLM-5.3",
+      "description": "Z.AI GLM coding model routed through local codex-proxy.",
+      "base_instructions": "You are Codex, a coding agent. Be concise, precise, and useful.",
+      "default_reasoning_level": "max",
+      "supported_reasoning_levels": [
+        { "effort": "low", "description": "Lightweight reasoning" },
+        { "effort": "high", "description": "Enhanced reasoning for coding tasks" },
+        { "effort": "max", "description": "Deep reasoning for complex tasks" }
+      ],
+      "shell_type": "shell_command",
+      "visibility": "list",
+      "supported_in_api": true,
+      "priority": 60,
+      "additional_speed_tiers": [],
+      "service_tiers": [],
+      "availability_nux": null,
+      "upgrade": null,
+      "supports_reasoning_summaries": false,
+      "default_reasoning_summary": "none",
+      "support_verbosity": false,
+      "default_verbosity": "medium",
+      "apply_patch_tool_type": "freeform",
+      "web_search_tool_type": "text_and_image",
+      "truncation_policy": { "mode": "tokens", "limit": 10000 },
+      "supports_parallel_tool_calls": true,
+      "supports_image_detail_original": true,
+      "context_window": 1000000,
+      "max_context_window": 1000000,
+      "effective_context_window_percent": 95,
+      "experimental_supported_tools": [],
+      "input_modalities": ["text"],
+      "supports_search_tool": true,
+      "use_responses_lite": false
+    },
+    {
       "slug": "glm-5-turbo",
       "display_name": "GLM-5-Turbo",
       "description": "Z.AI faster GLM model routed through local codex-proxy.",
@@ -133,10 +171,10 @@ PROXY_CONFIG_JSON = f"""{{
   }},
   "zai": {{
     "api_url": "{ZAI_CODING_CHAT_URL}",
-    "models": ["glm-5.2", "glm-5-turbo"]
+    "models": []
   }},
   "models": {{
-    "served": ["glm-5.2", "glm-5-turbo", "compact-default"]
+    "served": []
   }},
   "routing": {{
     "model_routes": {{
@@ -204,6 +242,8 @@ PROXY_CONFIG_JSON = f"""{{
 }}
 """
 
+ZAI_MODELS_URL = ZAI_CODING_CHAT_URL.removesuffix("/chat/completions") + "/models"
+
 
 def extract_model_messages() -> str:
     """Extract model_messages from the real ~/.codex model catalog.
@@ -264,6 +304,57 @@ def extract_model_messages() -> str:
         )
 
     return json.dumps(model_messages)
+
+
+def discover_zai_models(api_key: str) -> list[str]:
+    """Return model slugs from the account-scoped Z.AI models endpoint."""
+    request = Request(ZAI_MODELS_URL, headers={"Authorization": f"Bearer {api_key}"})
+    try:
+        with urlopen(request, timeout=10) as response:
+            payload = json.load(response)
+    except (HTTPError, TimeoutError, URLError, json.JSONDecodeError) as exc:
+        print(f"Warning: could not discover Z.AI models ({exc}); using the built-in catalog.")
+        return []
+
+    models = payload.get("data", [])
+    if not isinstance(models, list):
+        return []
+    return [
+        model_id
+        for model in models
+        if isinstance(model, dict)
+        and isinstance(model.get("id"), str)
+        and (model_id := model["id"].strip())
+    ]
+
+
+def augment_catalog(catalog: dict, discovered_models: list[str]) -> None:
+    """Add API models that Codex does not know while preserving existing entries."""
+    models = catalog.setdefault("models", [])
+    existing = {model["slug"] for model in models}
+    template = next((model for model in models if model.get("slug") == "glm-5.2"), models[0])
+
+    for priority, slug in enumerate(discovered_models, start=100):
+        if not slug or slug in existing:
+            continue
+        model = json.loads(json.dumps(template))
+        model.update(
+            {
+                "slug": slug,
+                "display_name": slug.upper(),
+                "description": "Z.AI model discovered from the account models endpoint.",
+                "default_reasoning_level": "high",
+                "supported_reasoning_levels": [
+                    {"effort": "low", "description": "Lightweight reasoning"},
+                    {"effort": "medium", "description": "Balanced reasoning"},
+                    {"effort": "high", "description": "More reasoning for coding tasks"},
+                ],
+                "priority": priority,
+                "input_modalities": ["text"],
+            }
+        )
+        models.append(model)
+        existing.add(slug)
 
 
 def read_zlaude_key() -> str:
@@ -334,6 +425,7 @@ def main() -> None:
     proxy_config_path.write_text(PROXY_CONFIG_JSON)
     model_catalog_path.parent.mkdir(parents=True, exist_ok=True)
     catalog = json.loads(MODEL_CATALOG_JSON)
+    augment_catalog(catalog, discover_zai_models(api_key))
     for model in catalog.get("models", []):
         model["model_messages"] = json.loads(model_messages_json)
     model_catalog_path.write_text(json.dumps(catalog, indent=2))

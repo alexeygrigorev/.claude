@@ -75,6 +75,11 @@ It writes Codex config to `~/.zodex/config.toml`, proxy config to
 private file permissions. Use it via `zodex`; use `zy` for the same profile with
 Codex's bypass/yolo flag.
 
+The Z.AI proxy catalog and served-model list are intentionally empty so models are
+discovered from the account-scoped Z.AI models endpoint. During setup, newly
+discovered models are added to Codex's local catalog automatically; explicit
+GLM entries remain available as fallbacks if discovery is temporarily unavailable.
+
 Start or update the proxy manually with:
 
 ```bash
