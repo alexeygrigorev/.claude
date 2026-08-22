@@ -4,10 +4,10 @@ set -euo pipefail
 HOST="${GODEX_PROXY_HOST:-127.0.0.1}"
 PORT="${GODEX_PROXY_PORT:-18766}"
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PROXY_REPO="${GO_CODEX_PROXY_REPO:-alexeygrigorev/go-codex-proxy}"
-PROXY_SRC_DIR="${GO_CODEX_PROXY_SRC:-${HOME}/git/go-codex-proxy}"
+PROXY_REPO="${GO_CODEX_PROXY_REPO:-alexeygrigorev/codex-proxy}"
+PROXY_SRC_DIR="${GO_CODEX_PROXY_SRC:-${HOME}/git/zai-codex-proxy}"
 PROXY_BIN_DIR="${GO_CODEX_PROXY_BIN_DIR:-${HOME}/.godex/bin}"
-PROXY_BIN="${GO_CODEX_PROXY_BIN:-${PROXY_BIN_DIR}/go-codex-proxy}"
+PROXY_BIN="${GO_CODEX_PROXY_BIN:-${PROXY_BIN_DIR}/codex-proxy}"
 PROXY_VERSION_FILE="${PROXY_BIN}.version"
 GODEX_DIR="${GODEX_DIR:-${HOME}/.godex}"
 ENV_FILE="${GODEX_ENV_FILE:-${GODEX_DIR}/go.env}"
@@ -43,9 +43,9 @@ asset_name() {
   esac
 
   if [[ "$os" == "windows" ]]; then
-    printf 'go-codex-proxy-%s-%s.exe\n' "$os" "$arch"
+    printf 'codex-proxy-%s-%s.exe\n' "$os" "$arch"
   else
-    printf 'go-codex-proxy-%s-%s\n' "$os" "$arch"
+    printf 'codex-proxy-%s-%s\n' "$os" "$arch"
   fi
 }
 
@@ -101,7 +101,7 @@ build_proxy_from_source() {
   (cd "$PROXY_SRC_DIR" && cargo build --release) >&2 || return 1
 
   mkdir -p "$PROXY_BIN_DIR"
-  cp "$PROXY_SRC_DIR/target/release/go-codex-proxy" "$PROXY_BIN" || return 1
+  cp "$PROXY_SRC_DIR/target/release/codex-proxy" "$PROXY_BIN" || return 1
   chmod +x "$PROXY_BIN"
   "$PROXY_BIN" --version 2>/dev/null | awk '{print "v"$NF}' >"$PROXY_VERSION_FILE" || true
   PROXY_UPDATED=1

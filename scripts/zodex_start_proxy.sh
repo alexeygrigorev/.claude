@@ -4,9 +4,9 @@ set -euo pipefail
 HOST="${ZODEX_PROXY_HOST:-127.0.0.1}"
 PORT="${ZODEX_PROXY_PORT:-18765}"
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PROXY_REPO="${ZODEX_PROXY_REPO:-alexeygrigorev/zai-codex-proxy}"
+PROXY_REPO="${ZODEX_PROXY_REPO:-alexeygrigorev/codex-proxy}"
 PROXY_BIN_DIR="${ZODEX_PROXY_BIN_DIR:-${HOME}/.zodex/bin}"
-PROXY_BIN="${ZODEX_PROXY_BIN:-${PROXY_BIN_DIR}/zai-codex-proxy}"
+PROXY_BIN="${ZODEX_PROXY_BIN:-${PROXY_BIN_DIR}/codex-proxy}"
 PROXY_VERSION_FILE="${PROXY_BIN}.version"
 ZODEX_DIR="${ZODEX_DIR:-${HOME}/.zodex}"
 ENV_FILE="${ZODEX_ENV_FILE:-${ZODEX_DIR}/zai.env}"
@@ -42,9 +42,9 @@ asset_name() {
   esac
 
   if [[ "$os" == "windows" ]]; then
-    printf 'zai-codex-proxy-%s-%s.exe\n' "$os" "$arch"
+    printf 'codex-proxy-%s-%s.exe\n' "$os" "$arch"
   else
-    printf 'zai-codex-proxy-%s-%s\n' "$os" "$arch"
+    printf 'codex-proxy-%s-%s\n' "$os" "$arch"
   fi
 }
 

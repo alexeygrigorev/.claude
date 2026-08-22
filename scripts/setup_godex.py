@@ -49,7 +49,7 @@ def godex_overrides(model_catalog_path: Path) -> dict:
         "model_providers": {
             "go-codex-proxy": {
                 "name": "OpenCode Go via local go-codex-proxy",
-                "base_url": f"http://127.0.0.1:{GODEX_PROXY_PORT}/v1",
+                "base_url": f"http://127.0.0.1:{GODEX_PROXY_PORT}/go/v1",
                 "wire_api": "responses",
                 "requires_openai_auth": False,
             }
@@ -369,13 +369,36 @@ PROXY_CONFIG_JSON = f"""{{
     "port": {GODEX_PROXY_PORT},
     "log_level": "INFO"
   }},
-  "upstream": {{
-    "base_url": "{GO_BASE_URL}",
-    "api_key_env": "OPENCODE_GO_API_KEY",
-    "api_key": null
+  "zai": {{
+    "api_url": "https://api.z.ai/api/coding/paas/v4/chat/completions",
+    "models": []
   }},
-  "anthropic": {{
-    "default_max_tokens": 16384
+  "models": {{
+    "served": []
+  }},
+  "routing": {{
+    "model_routes": {{}}
+  }},
+  "accounts": [],
+  "access": {{
+    "require_key": false,
+    "keys": []
+  }},
+  "reasoning": {{
+    "default_effort": "high",
+    "effort_levels": {{
+      "none": {{ "budget": 0, "level": "LOW" }},
+      "medium": {{ "budget": 16384, "level": "MEDIUM" }},
+      "high": {{ "budget": 32768, "level": "HIGH" }}
+    }}
+  }},
+  "timeouts": {{
+    "connect_seconds": 10,
+    "read_seconds": 600
+  }},
+  "compaction": {{
+    "temperature": 0.1,
+    "preferred_targets": []
   }},
   "retry": {{
     "enabled": true,
@@ -384,14 +407,12 @@ PROXY_CONFIG_JSON = f"""{{
     "max_delay_ms": 60000,
     "backoff_multiplier": 2.0
   }},
-  "proxy": {{
-    "url": null
-  }},
-  "routing": {{
-    "model_routes": {{}}
-  }},
-  "models": {{
-    "served": []
+  "providers": {{
+    "go": {{
+      "base_url": "{GO_BASE_URL}",
+      "api_key_env": "OPENCODE_GO_API_KEY",
+      "api_key": null
+    }}
   }}
 }}
 """
