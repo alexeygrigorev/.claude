@@ -38,6 +38,14 @@ def godex_overrides(model_catalog_path: Path) -> dict:
         "model_context_window": 272000,
         "disable_response_storage": True,
         "suppress_unstable_features_warning": True,
+        # Subagent support requires multi-agent v2 regardless of the base
+        # config; everything else under [features] still inherits from it.
+        "features": {
+            "multi_agent_v2": {
+                "enabled": True,
+                "max_concurrent_threads_per_session": 16,
+            }
+        },
         "model_providers": {
             "go-codex-proxy": {
                 "name": "OpenCode Go via local go-codex-proxy",

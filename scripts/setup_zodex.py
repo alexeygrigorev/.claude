@@ -38,6 +38,14 @@ def zodex_overrides(model_catalog_path: Path) -> dict:
         "disable_response_storage": True,
         "personality": "pragmatic",
         "suppress_unstable_features_warning": True,
+        # Subagent support requires multi-agent v2 regardless of the base
+        # config; everything else under [features] still inherits from it.
+        "features": {
+            "multi_agent_v2": {
+                "enabled": True,
+                "max_concurrent_threads_per_session": 16,
+            }
+        },
         "model_providers": {
             "codex-proxy": {
                 "name": "Z.AI via local codex-proxy",
