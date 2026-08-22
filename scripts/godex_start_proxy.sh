@@ -1,20 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-HOST="${ZODEX_PROXY_HOST:-127.0.0.1}"
-PORT="${ZODEX_PROXY_PORT:-18765}"
+HOST="${GODEX_PROXY_HOST:-127.0.0.1}"
+PORT="${GODEX_PROXY_PORT:-18766}"
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PROXY_REPO="${ZODEX_PROXY_REPO:-alexeygrigorev/zai-codex-proxy}"
-PROXY_BIN_DIR="${ZODEX_PROXY_BIN_DIR:-${HOME}/.zodex/bin}"
-PROXY_BIN="${ZODEX_PROXY_BIN:-${PROXY_BIN_DIR}/zai-codex-proxy}"
+PROXY_REPO="${GO_CODEX_PROXY_REPO:-alexeygrigorev/go-codex-proxy}"
+PROXY_SRC_DIR="${GO_CODEX_PROXY_SRC:-${HOME}/git/go-codex-proxy}"
+PROXY_BIN_DIR="${GO_CODEX_PROXY_BIN_DIR:-${HOME}/.godex/bin}"
+PROXY_BIN="${GO_CODEX_PROXY_BIN:-${PROXY_BIN_DIR}/go-codex-proxy}"
 PROXY_VERSION_FILE="${PROXY_BIN}.version"
-ZODEX_DIR="${ZODEX_DIR:-${HOME}/.zodex}"
-ENV_FILE="${ZODEX_ENV_FILE:-${ZODEX_DIR}/zai.env}"
-CONFIG_FILE="${ZODEX_PROXY_CONFIG_FILE:-${ZODEX_DIR}/codex-proxy/config.json}"
-PID_FILE="${ZODEX_PROXY_PID_FILE:-${ZODEX_DIR}/codex-proxy/proxy.pid}"
-LOG_DIR="${ZODEX_PROXY_LOG_DIR:-${ZODEX_DIR}/log}"
-LOG_FILE="${ZODEX_PROXY_LOG_FILE:-${LOG_DIR}/codex-proxy.log}"
-RESTART_ON_UPDATE="${ZODEX_PROXY_RESTART_ON_UPDATE:-0}"
+GODEX_DIR="${GODEX_DIR:-${HOME}/.godex}"
+ENV_FILE="${GODEX_ENV_FILE:-${GODEX_DIR}/go.env}"
+CONFIG_FILE="${GODEX_PROXY_CONFIG_FILE:-${GODEX_DIR}/go-codex-proxy/config.json}"
+PID_FILE="${GODEX_PROXY_PID_FILE:-${GODEX_DIR}/go-codex-proxy/proxy.pid}"
+LOG_DIR="${GODEX_PROXY_LOG_DIR:-${GODEX_DIR}/log}"
+LOG_FILE="${GODEX_PROXY_LOG_FILE:-${LOG_DIR}/go-codex-proxy.log}"
+RESTART_ON_UPDATE="${GODEX_PROXY_RESTART_ON_UPDATE:-0}"
 PROXY_UPDATED=0
 
 asset_name() {
@@ -27,7 +28,7 @@ asset_name() {
     Darwin) os="darwin" ;;
     MINGW*|MSYS*|CYGWIN*) os="windows" ;;
     *)
-      echo "unsupported OS for zodex proxy binary: $os" >&2
+      echo "unsupported OS for godex proxy binary: $os" >&2
       return 1
       ;;
   esac
@@ -36,15 +37,15 @@ asset_name() {
     x86_64|amd64) arch="amd64" ;;
     aarch64|arm64) arch="arm64" ;;
     *)
-      echo "unsupported architecture for zodex proxy binary: $arch" >&2
+      echo "unsupported architecture for godex proxy binary: $arch" >&2
       return 1
       ;;
   esac
 
   if [[ "$os" == "windows" ]]; then
-    printf 'zai-codex-proxy-%s-%s.exe\n' "$os" "$arch"
+    printf 'go-codex-proxy-%s-%s.exe\n' "$os" "$arch"
   else
-    printf 'zai-codex-proxy-%s-%s\n' "$os" "$arch"
+    printf 'go-codex-proxy-%s-%s\n' "$os" "$arch"
   fi
 }
 
@@ -90,10 +91,26 @@ version_is_newer() {
   [[ "$a" == "$newest" ]]
 }
 
+build_proxy_from_source() {
+  if [[ ! -d "$PROXY_SRC_DIR" ]]; then
+    return 1
+  fi
+  command -v cargo >/dev/null 2>&1 || return 1
+
+  echo "Building godex proxy from source in $PROXY_SRC_DIR" >&2
+  (cd "$PROXY_SRC_DIR" && cargo build --release) >&2 || return 1
+
+  mkdir -p "$PROXY_BIN_DIR"
+  cp "$PROXY_SRC_DIR/target/release/go-codex-proxy" "$PROXY_BIN" || return 1
+  chmod +x "$PROXY_BIN"
+  "$PROXY_BIN" --version 2>/dev/null | awk '{print "v"$NF}' >"$PROXY_VERSION_FILE" || true
+  PROXY_UPDATED=1
+}
+
 install_proxy_binary() {
   local tag="${1:-}"
   local asset url tmp
-  asset="$(asset_name)"
+  asset="$(asset_name)" || return 1
   if [[ -n "$tag" ]]; then
     url="https://github.com/${PROXY_REPO}/releases/download/${tag}/${asset}"
   else
@@ -102,8 +119,15 @@ install_proxy_binary() {
   tmp="${PROXY_BIN}.download"
 
   mkdir -p "$PROXY_BIN_DIR"
-  echo "Installing zodex proxy from $url" >&2
-  curl -fsSL "$url" -o "$tmp"
+  if ! curl -fsSL "$url" -o "$tmp"; then
+    # No release published yet (or download failed): fall back to building
+    # from a local checkout of the proxy.
+    build_proxy_from_source || {
+      echo "Could not download godex proxy from ${url}" >&2
+      return 1
+    }
+    return 0
+  fi
   chmod +x "$tmp"
   mv "$tmp" "$PROXY_BIN"
   if [[ -n "$tag" ]]; then
@@ -116,7 +140,7 @@ install_proxy_binary() {
 
 ensure_proxy_binary() {
   local latest_tag installed_tag
-  latest_tag="$(latest_proxy_tag)"
+  latest_tag="$(latest_proxy_tag 2>/dev/null || true)"
   installed_tag="$(installed_proxy_tag || true)"
 
   if [[ ! -x "$PROXY_BIN" ]]; then
@@ -126,10 +150,10 @@ ensure_proxy_binary() {
 
   # Only update when the latest release is strictly newer than what is
   # installed (or the installed version is unknown). This avoids clobbering a
-  # newer local/dev build — e.g. a binary built from source ahead of the latest
-  # published release — and skips pointless reinstalls when they already match.
+  # newer local/dev build — e.g. a binary built from source ahead of the
+  # latest published release — and skips pointless reinstalls when they match.
   if [[ -n "$latest_tag" ]] && { [[ -z "$installed_tag" ]] || version_is_newer "$latest_tag" "$installed_tag"; }; then
-    echo "Updating zodex proxy from ${installed_tag:-unknown} to ${latest_tag}" >&2
+    echo "Updating godex proxy from ${installed_tag:-unknown} to ${latest_tag}" >&2
     install_proxy_binary "$latest_tag"
   fi
 }
@@ -155,7 +179,7 @@ stop_existing_proxy() {
 
   for pid in $pids; do
     if [[ "$pid" != "$$" ]] && kill -0 "$pid" 2>/dev/null; then
-      echo "Stopping existing zodex proxy process $pid" >&2
+      echo "Stopping existing godex proxy process $pid" >&2
       kill "$pid" 2>/dev/null || true
     fi
   done
@@ -184,57 +208,58 @@ if curl -fsS "http://${HOST}:${PORT}/health" >/dev/null 2>&1; then
     if [[ "$RESTART_ON_UPDATE" == "1" ]]; then
       stop_existing_proxy
     else
-      echo "Installed latest zodex proxy binary; keeping already-running proxy on ${HOST}:${PORT}" >&2
+      echo "Installed latest godex proxy binary; keeping already-running proxy on ${HOST}:${PORT}" >&2
       exit 0
     fi
   else
-    echo "Could not check/install latest zodex proxy; using already-running proxy on ${HOST}:${PORT}" >&2
+    echo "Could not check/install latest godex proxy; using already-running proxy on ${HOST}:${PORT}" >&2
     exit 0
   fi
 else
-  # Proxy not running. If the update check fails (e.g. GitHub API rate limit),
-  # fall back to an already-installed binary instead of aborting the launch.
-  ensure_proxy_binary || {
+  # Proxy not running. If the update check fails (e.g. GitHub API rate limit,
+  # or no release exists yet), fall back to an already-installed binary or a
+  # local source build instead of aborting the launch.
+  ensure_proxy_binary || build_proxy_from_source || {
     if [[ -x "$PROXY_BIN" ]]; then
-      echo "Could not check for latest zodex proxy; using installed binary" >&2
+      echo "Could not check for latest godex proxy; using installed binary" >&2
     else
-      echo "Could not install zodex proxy binary (GitHub API unavailable)" >&2
+      echo "Could not install godex proxy binary (GitHub API unavailable and no local build)" >&2
       exit 1
     fi
   }
 fi
 
 if [[ ! -f "$ENV_FILE" ]]; then
-  echo "zodex profile is missing $ENV_FILE. Run: ${REPO_DIR}/configure.sh zodex" >&2
+  echo "godex profile is missing $ENV_FILE. Run: ${REPO_DIR}/configure.sh godex" >&2
   exit 1
 fi
 
 # Propagate default-Codex config changes into the profile config (best effort;
 # a stale generated config still works).
 if command -v python3 >/dev/null 2>&1; then
-  python3 "$REPO_DIR/scripts/setup_zodex.py" --sync-config >/dev/null 2>&1 || true
+  python3 "$REPO_DIR/scripts/setup_godex.py" --sync-config >/dev/null 2>&1 || true
 elif command -v uv >/dev/null 2>&1; then
-  uv run --no-project "$REPO_DIR/scripts/setup_zodex.py" --sync-config >/dev/null 2>&1 || true
+  uv run --no-project "$REPO_DIR/scripts/setup_godex.py" --sync-config >/dev/null 2>&1 || true
 fi
 
 if [[ ! -f "$CONFIG_FILE" ]]; then
-  echo "zodex proxy config is missing $CONFIG_FILE. Run: ${REPO_DIR}/configure.sh zodex" >&2
+  echo "godex proxy config is missing $CONFIG_FILE. Run: ${REPO_DIR}/configure.sh godex" >&2
   exit 1
 fi
 
 # shellcheck disable=SC1090
 source "$ENV_FILE"
-if [[ -z "${ZAI_API_KEY:-}" ]]; then
-  echo "zodex profile is missing ZAI_API_KEY in $ENV_FILE" >&2
+if [[ -z "${GO_API_KEY:-}" ]]; then
+  echo "godex profile is missing GO_API_KEY in $ENV_FILE" >&2
   exit 1
 fi
 
 mkdir -p "$LOG_DIR" "$(dirname "$PID_FILE")"
 if command -v setsid >/dev/null 2>&1; then
-  setsid env CODEX_PROXY_ZAI_API_KEY="$ZAI_API_KEY" "$PROXY_BIN" --config "$CONFIG_FILE" \
+  setsid env OPENCODE_GO_API_KEY="$GO_API_KEY" "$PROXY_BIN" --config "$CONFIG_FILE" \
     >"$LOG_FILE" 2>&1 </dev/null &
 else
-  nohup env CODEX_PROXY_ZAI_API_KEY="$ZAI_API_KEY" "$PROXY_BIN" --config "$CONFIG_FILE" \
+  nohup env OPENCODE_GO_API_KEY="$GO_API_KEY" "$PROXY_BIN" --config "$CONFIG_FILE" \
     >"$LOG_FILE" 2>&1 </dev/null &
 fi
 printf '%s\n' "$!" >"$PID_FILE"
@@ -246,6 +271,6 @@ for _ in {1..50}; do
   sleep 0.1
 done
 
-echo "zodex proxy did not become ready on ${HOST}:${PORT}. Log: $LOG_FILE" >&2
+echo "godex proxy did not become ready on ${HOST}:${PORT}. Log: $LOG_FILE" >&2
 tail -n 40 "$LOG_FILE" >&2 || true
 exit 1

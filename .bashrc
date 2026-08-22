@@ -62,6 +62,32 @@ _zodex_run() {
 zodex() { _zodex_run "$@"; }
 zy()    { _zodex_run --dangerously-bypass-approvals-and-sandbox "$@"; }
 
+# godex: Codex routed to OpenCode Go via the ~/.godex profile
+# (configure with: ./configure.sh godex).
+_godex_run() {
+  local env_file="$AGENTS_DOTFILES_DIR/config/codex/godex_env_unset.txt"
+  local profile_env="$HOME/.godex/go.env"
+  local unset_args=()
+
+  if [[ -f "$env_file" ]]; then
+    while IFS= read -r var; do
+      [[ -n "$var" && "$var" != \#* ]] && unset_args+=(-u "$var")
+    done < "$env_file"
+  fi
+
+  if [[ ! -f "$profile_env" ]]; then
+    echo "godex is not configured. Run: $AGENTS_DOTFILES_DIR/configure.sh godex" >&2
+    return 1
+  fi
+
+  "$AGENTS_DOTFILES_DIR/scripts/godex_start_proxy.sh" || return
+
+  env "${unset_args[@]}" CODEX_HOME="$HOME/.godex" codex "$@"
+}
+
+godex() { _godex_run "$@"; }
+gy()    { _godex_run --dangerously-bypass-approvals-and-sandbox "$@"; }
+
 codex_sync_config() {
   local script="$AGENTS_DOTFILES_DIR/scripts/setup_codex_config.py"
 

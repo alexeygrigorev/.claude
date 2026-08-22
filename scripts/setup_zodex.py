@@ -1,4 +1,10 @@
-"""Configure the 'zodex' profile: Codex routed to Z.AI under ~/.zodex."""
+"""Configure the 'zodex' profile: Codex routed to Z.AI under ~/.zodex.
+
+The profile config is the default ``~/.codex/config.toml`` with only
+routing-related keys overridden, so settings you enable/disable in the main
+Codex config propagate here. Re-run with ``--sync-config`` (or relaunch
+`zodex`, which does it automatically) after editing the default config.
+"""
 
 from __future__ import annotations
 
@@ -13,39 +19,50 @@ from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _codex_profile_merge import build_profile_toml
+
 
 ZODEX_PROXY_PORT = 18765
 ZAI_CODING_CHAT_URL = "https://api.z.ai/api/coding/paas/v4/chat/completions"
 ZAI_API_KEY_URL = "https://z.ai/manage-apikey/apikey-list"
 
 
-CONFIG_TOML = f"""# Codex routed to Z.AI GLM Coding Plan.
-# This profile is selected by setting CODEX_HOME=$HOME/.zodex.
+def zodex_overrides(model_catalog_path: Path) -> dict:
+    """Routing-only overrides layered on top of the default Codex config."""
+    return {
+        "model": "glm-5.3",
+        "model_provider": "codex-proxy",
+        "model_catalog_json": str(model_catalog_path),
+        "model_context_window": 1000000,
+        "disable_response_storage": True,
+        "personality": "pragmatic",
+        "suppress_unstable_features_warning": True,
+        "model_providers": {
+            "codex-proxy": {
+                "name": "Z.AI via local codex-proxy",
+                "base_url": f"http://127.0.0.1:{ZODEX_PROXY_PORT}/v1",
+                "wire_api": "responses",
+                "requires_openai_auth": False,
+            }
+        },
+    }
 
-model = "glm-5.3"
-model_provider = "codex-proxy"
-model_catalog_json = __MODEL_CATALOG_JSON__
-model_context_window = 1000000
-disable_response_storage = true
-personality = "pragmatic"
-suppress_unstable_features_warning = true
 
-[features]
-apps = false
-
-[features.multi_agent_v2]
-enabled = true
-max_concurrent_threads_per_session = 16
-
-[plugins."github@openai-curated-remote"]
-enabled = false
-
-[model_providers.codex-proxy]
-name = "Z.AI via local codex-proxy"
-base_url = "http://127.0.0.1:{ZODEX_PROXY_PORT}/v1"
-wire_api = "responses"
-requires_openai_auth = false
-"""
+def write_profile_config(model_catalog_path: Path) -> Path:
+    """Regenerate ~/.zodex/config.toml from the default Codex config."""
+    text, _base = build_profile_toml(
+        zodex_overrides(model_catalog_path),
+        profile_name="zodex",
+        sync_command="scripts/setup_zodex.py --sync-config",
+        # The base config's reasoning effort may be invalid for the routed
+        # model catalog; let per-model defaults apply instead.
+        drop_keys=("model_reasoning_effort",),
+    )
+    config_path = Path.home() / ".zodex" / "config.toml"
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    config_path.write_text(text)
+    return config_path
 
 
 MODEL_CATALOG_JSON = """{
@@ -403,23 +420,31 @@ def main() -> None:
         action="store_true",
         help="reuse ~/.zlaude/settings.json's Z.AI key without prompting",
     )
+    parser.add_argument(
+        "--sync-config",
+        action="store_true",
+        help="only regenerate config.toml from the default Codex config; "
+        "no prompts and no API key needed",
+    )
     args = parser.parse_args()
-
-    api_key = prompt_api_key(args.reuse_zlaude_key)
 
     zodex_dir = Path.home() / ".zodex"
     zodex_dir.mkdir(parents=True, exist_ok=True)
 
-    config_path = zodex_dir / "config.toml"
     env_path = zodex_dir / "zai.env"
     proxy_config_path = zodex_dir / "codex-proxy" / "config.json"
     model_catalog_path = zodex_dir / "model-catalogs" / "zai.json"
 
+    if args.sync_config:
+        config_path = write_profile_config(model_catalog_path)
+        print(f"  Synced {config_path} from the default Codex config")
+        return
+
+    api_key = prompt_api_key(args.reuse_zlaude_key)
+
     model_messages_json = extract_model_messages()
 
-    config_path.write_text(
-        CONFIG_TOML.replace("__MODEL_CATALOG_JSON__", json.dumps(str(model_catalog_path)))
-    )
+    config_path = write_profile_config(model_catalog_path)
     write_private_file(env_path, f"ZAI_API_KEY={shlex.quote(api_key)}\n")
     proxy_config_path.parent.mkdir(parents=True, exist_ok=True)
     proxy_config_path.write_text(PROXY_CONFIG_JSON)

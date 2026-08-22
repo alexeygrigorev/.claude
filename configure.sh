@@ -9,7 +9,7 @@ TARGETS=()
 
 usage() {
     cat <<'EOF'
-Usage: ./configure.sh [--yes] [all|claude|codex|opencode|zlaude|zodex ...]
+Usage: ./configure.sh [--yes] [all|claude|codex|opencode|zlaude|zodex|godex ...]
 
 Targets:
   claude    Symlink skills into ~/.claude and sync Claude settings
@@ -19,6 +19,8 @@ Targets:
             (prompts for a Z.AI API key; not included in 'all')
   zodex     Configure a Z.AI-routed Codex profile under ~/.zodex
             (prompts for a Z.AI API key; not included in 'all')
+  godex     Configure an OpenCode Go-routed Codex profile under ~/.godex
+            (prompts for an OpenCode Go API key; not included in 'all')
   all       Configure every target except zlaude (default)
 EOF
 }
@@ -32,7 +34,7 @@ for arg in "$@"; do
             usage
             exit 0
             ;;
-        all|claude|codex|opencode|zlaude|zodex)
+        all|claude|codex|opencode|zlaude|zodex|godex)
             TARGETS+=("$arg")
             ;;
         *)
@@ -169,6 +171,15 @@ if has_explicit_target zodex; then
     run_python "$REPO_DIR/scripts/setup_zodex.py"
     chmod +x "$REPO_DIR/scripts/zodex_start_proxy.sh"
     CODEX_HOME="$HOME/.zodex" run_python "$REPO_DIR/scripts/setup_codex_skills.py"
+fi
+
+if has_explicit_target godex; then
+    # Prompt for / validate the OpenCode Go key first. With set -e, a blank
+    # prompt aborts here before the skills symlink is created, so nothing is
+    # left behind.
+    run_python "$REPO_DIR/scripts/setup_godex.py"
+    chmod +x "$REPO_DIR/scripts/godex_start_proxy.sh"
+    CODEX_HOME="$HOME/.godex" run_python "$REPO_DIR/scripts/setup_codex_skills.py"
 fi
 
 # Install CLI wrappers to ~/bin
