@@ -86,7 +86,7 @@ _godex_run() {
 }
 
 godex() { _godex_run "$@"; }
-gy()    { _godex_run --dangerously-bypass-approvals-and-sandbox "$@"; }
+gy()    { _godex_run --yolo "$@"; }
 
 codex_sync_config() {
   local script="$AGENTS_DOTFILES_DIR/scripts/setup_codex_config.py"
