@@ -377,6 +377,16 @@ PROXY_CONFIG_JSON = f"""{{
   "anthropic": {{
     "default_max_tokens": 16384
   }},
+  "retry": {{
+    "enabled": true,
+    "max_attempts": 5,
+    "initial_delay_ms": 1000,
+    "max_delay_ms": 60000,
+    "backoff_multiplier": 2.0
+  }},
+  "proxy": {{
+    "url": null
+  }},
   "routing": {{
     "model_routes": {{}}
   }},
