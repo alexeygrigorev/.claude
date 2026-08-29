@@ -21,6 +21,7 @@ Targets:
             (prompts for a Z.AI API key; not included in 'all')
   godex     Configure an OpenCode Go-routed Codex profile under ~/.godex
             (prompts for an OpenCode Go API key; not included in 'all')
+  zcodex    Configure the zcodex Codex variant under ~/.zcodex
   all       Configure every target except zlaude (default)
 EOF
 }
@@ -34,7 +35,7 @@ for arg in "$@"; do
             usage
             exit 0
             ;;
-        all|claude|codex|opencode|zlaude|zodex|godex)
+    all|claude|codex|opencode|zlaude|zodex|godex|zcodex)
             TARGETS+=("$arg")
             ;;
         *)
@@ -180,6 +181,24 @@ if has_explicit_target godex; then
     run_python "$REPO_DIR/scripts/setup_godex.py"
     chmod +x "$REPO_DIR/scripts/godex_start_proxy.sh"
     CODEX_HOME="$HOME/.godex" run_python "$REPO_DIR/scripts/setup_codex_skills.py"
+fi
+
+if has_explicit_target zcodex; then
+    # zcodex uses ZCode's own credentials, so no API-key prompt is needed.
+    mkdir -p "$HOME/.zcodex"
+    if [[ ! -f "$HOME/.zcodex/config.toml" ]]; then
+        cat > "$HOME/.zcodex/config.toml" <<'EOF'
+model = "glm-5.3-flash"
+model_reasoning_effort = "max"
+model_provider = "zcode"
+
+[model_providers.zcode]
+name = "ZCode"
+base_url = ""
+wire_api = "zcode"
+EOF
+    fi
+    CODEX_HOME="$HOME/.zcodex" run_python "$REPO_DIR/scripts/setup_codex_skills.py"
 fi
 
 # Install CLI wrappers to ~/bin
