@@ -15,7 +15,9 @@ CONFIG_FILE="${GODEX_PROXY_CONFIG_FILE:-${GODEX_DIR}/go-codex-proxy/config.json}
 PID_FILE="${GODEX_PROXY_PID_FILE:-${GODEX_DIR}/go-codex-proxy/proxy.pid}"
 LOG_DIR="${GODEX_PROXY_LOG_DIR:-${GODEX_DIR}/log}"
 LOG_FILE="${GODEX_PROXY_LOG_FILE:-${LOG_DIR}/go-codex-proxy.log}"
-RESTART_ON_UPDATE="${GODEX_PROXY_RESTART_ON_UPDATE:-0}"
+# The wrapper owns this server's lifecycle. Restart it when a newer binary is
+# installed so a stale process cannot keep serving the previous build.
+RESTART_ON_UPDATE="${GODEX_PROXY_RESTART_ON_UPDATE:-1}"
 PROXY_UPDATED=0
 
 asset_name() {
@@ -64,17 +66,23 @@ latest_proxy_tag() {
 }
 
 installed_proxy_tag() {
-  if [[ -f "$PROXY_VERSION_FILE" ]]; then
-    tr -d '[:space:]' <"$PROXY_VERSION_FILE"
-    return
-  fi
-
+  # The sidecar can outlive a manually replaced binary. Trust the executable
+  # first; otherwise a stale sidecar can make an old proxy look up to date.
   if [[ -x "$PROXY_BIN" ]]; then
     local version
     version="$("$PROXY_BIN" --version 2>/dev/null | awk '{print $NF}')"
     if [[ -n "$version" ]]; then
-      printf 'v%s\n' "$version"
+      if [[ "$version" == v* ]]; then
+        printf '%s\n' "$version"
+      else
+        printf 'v%s\n' "$version"
+      fi
+      return
     fi
+  fi
+
+  if [[ -f "$PROXY_VERSION_FILE" ]]; then
+    tr -d '[:space:]' <"$PROXY_VERSION_FILE"
   fi
 }
 

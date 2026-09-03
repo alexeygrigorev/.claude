@@ -32,7 +32,7 @@ GO_AUTH_URL = "https://opencode.ai/auth"
 def godex_overrides(model_catalog_path: Path) -> dict:
     """Routing-only overrides layered on top of the default Codex config."""
     return {
-        "model": "gpt-5.6-luna",
+        "model": "muse-spark-1.3-contributor",
         "model_provider": "go-codex-proxy",
         "model_catalog_json": str(model_catalog_path),
         "model_context_window": 272000,
@@ -48,7 +48,7 @@ def godex_overrides(model_catalog_path: Path) -> dict:
         },
         "model_providers": {
             "go-codex-proxy": {
-                "name": "OpenCode Go via local go-codex-proxy",
+                "name": "OpenCode Go via local codex-proxy",
                 "base_url": f"http://127.0.0.1:{GODEX_PROXY_PORT}/go/v1",
                 "wire_api": "responses",
                 "requires_openai_auth": False,
@@ -127,12 +127,7 @@ def build_catalog(discovered_models: list[str]) -> dict:
 PROXY_CONFIG_JSON = f"""{{
   "server": {{
     "host": "127.0.0.1",
-    "port": {GODEX_PROXY_PORT},
-    "log_level": "INFO"
-  }},
-  "zai": {{
-    "api_url": "https://api.z.ai/api/coding/paas/v4/chat/completions",
-    "models": []
+    "port": {GODEX_PROXY_PORT}
   }},
   "models": {{
     "served": []
@@ -255,7 +250,7 @@ def discover_go_models(api_key: str) -> list[str]:
         with urlopen(request, timeout=10) as response:
             payload = json.load(response)
     except (HTTPError, TimeoutError, URLError, json.JSONDecodeError) as exc:
-        print(f"Warning: could not discover OpenCode Go models ({exc}); using the built-in catalog.")
+        print(f"Warning: could not discover OpenCode Go models ({exc}); leaving the catalog empty.")
         return []
 
     models = payload.get("data", [])
