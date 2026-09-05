@@ -124,7 +124,7 @@ oc() {
     done < "$env_file"
   fi
 
-  env "${unset_args[@]}" opencode "$@"
+  env "${unset_args[@]}" opencode --auto "$@"
 }
 
 claude_init() {
