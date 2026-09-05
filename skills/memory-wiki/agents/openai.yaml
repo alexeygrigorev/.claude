@@ -1,0 +1,4 @@
+interface:
+  display_name: "Memory Wiki"
+  short_description: "Turn research into grounded writing or code"
+  default_prompt: "Use $memory-wiki to create a project-scoped research wiki and distill it into an execution-ready writing or building plan."
